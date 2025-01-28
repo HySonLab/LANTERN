@@ -1,1 +1,3 @@
-# TMI - Transformer for Molecular Biology Interaction
+# LANTERN: Leveraging Large Language Models And Transformer For Enhanced Molecular Interaction
+
+
