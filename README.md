@@ -43,11 +43,11 @@ LANTERN
 ```
 
 ## Training
-DTI datasets (BioSNAP, DAVIS, KIBA):
+### DTI datasets (BioSNAP, DAVIS, KIBA):
 
-First, ensure that pretrained weights for all entities in the dataset are properly located at data\embedding\{dataset_name}
+First, ensure that pretrained weights for all entities in the dataset are properly located at data\embedding\{dataset_name}.
 
-Second, cd code
+Second, cd code .
 
 Finally, run the training script:
 ```
@@ -70,11 +70,11 @@ python dti.py \
 
 Please modify the dataset_name, path_to_dataset, and save_path according to your experiments.
 
-DDI datasets (DeepDDI):
+### DDI datasets (DeepDDI):
 
-First, ensure that pretrained weights for all entities in the dataset are properly located at data\embedding\{dataset_name}
+First, ensure that pretrained weights for all entities in the dataset are properly located at data\embedding\{dataset_name} .
 
-Second, cd code
+Second, cd code .
 
 Finally, run the training script:
 ```
@@ -94,11 +94,11 @@ python ddi.py \
    
 ```
 
-PPI datasets (yeast):
+### PPI datasets (yeast):
 
-First, ensure that pretrained weights for all entities in the dataset are properly located at data\embedding\{dataset_name}
+First, ensure that pretrained weights for all entities in the dataset are properly located at data\embedding\{dataset_name}.
 
-Second, cd code
+Second, cd code.
 
 Finally, run the training script:
 ```
@@ -121,7 +121,7 @@ python ppi.py \
 Please modify the dataset_name, path_to_dataset, and save_path according to your experiments.
 
 ## Evaluation 
-First, cd code
+First, cd code.
 Second, run the following script :
 ```
 python eval.py \
@@ -130,7 +130,7 @@ python eval.py \
     --test_path path_to_dataset_folder \
 ```
 
-## Predict interaction between a pair of entities
+## Predict interactions between a pair of entities
 ```
 python predict.py \
     --model_save_path path_to_checkpoint \
