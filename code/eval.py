@@ -78,10 +78,6 @@ if __name__ == '__main__':
     parser.add_argument("--model_save_path", default=os.path.join(kgcnh_folder, 'log','training','BioSNAP', '1', 'result_0.992936974798785_19.pkl'), help="path to model saved")
     parser.add_argument('--test_path', default=biosnap_path)
     parser.add_argument("--gpu", default=False, help="enable gpu")
-    parser.add_argument("--model_args", default='log/new/model_arg.pkl')
-    parser.add_argument('--hop', type=int, default=1)
-    parser.add_argument('--neg_ratio', type=int, default=10)
-    #parser.add_argument('--data_processor_mode', type=str, default='test')
     args = parser.parse_args()
     evaluate(args)
     # unseen genes : auc, aupr : 0.7115384615384616 0.375765931372549

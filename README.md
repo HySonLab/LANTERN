@@ -26,39 +26,115 @@ conda env create -f environment.yaml
 conda activate LANTERN
 ```
 
+### File structure 
+Files should be placed as the following folder structure:
+```
+LANTERN
+├── code
+│   ├──file.py ...
+├── data
+│   ├── README.md
+│   ├── embedding
+├── log
+│   ├── README.md
+├── README.md
+├── environment.yaml
+│ 
+```
+
 ## Training
+DTI datasets (BioSNAP, DAVIS, KIBA):
+
+First, ensure that pretrained weights for all entities in the dataset are properly located at data\embedding\{dataset_name}
+
+Second, cd code
 
 Finally, run the training script:
 ```
-python train.py \
-    --num_workers 8 \
-    --batch_size 1 \
-    --accumulate_grad_batches 8 \
-    --save_dir "workdir/train/example_ProteinReDiff" \
-    --single_dim 256 \
-    --pair_dim 32 \
-    --num_blocks 4
+python dti.py \
+    --dataset_name "BioSNAP"\
+    --embed_dim 384\
+    --seed 120\
+    --valid_step 10\
+    --epoch 100\
+    --lr 0.0001\
+    --dropout 0.1\
+    --modality 1\
+    --save_model True\
+    --score_fun 'transformer'\
+    --save_path path_to_saved_checkpoints \
+    --drug_pretrained_dim 768\
+    --protein_sequence_dim 1024\
+   
 ```
 
-Please modify the batch_size, gpus, and accumulate_grad_batches arguments according to your machine(s). 
-Default values can be used to reproduce the settings used in our paper:
+Please modify the dataset_name, path_to_dataset, and save_path according to your experiments.
 
-```bash
-python train.py \
-    --training_mode \
-    --num_gpus 1\
-    --num_workers 30 \
-    --batch_size 2 \
-    --accumulate_grad_batches 10 \
-    --save_dir "workdir/train/example_ProteinReDiff" \
-    --single_dim 512 \
-    --mask_prob 0.15 \
-    --pair_dim 64 \
-    --num_steps 2000 \
-    --num_blocks 4
+DDI datasets (DeepDDI):
+
+First, ensure that pretrained weights for all entities in the dataset are properly located at data\embedding\{dataset_name}
+
+Second, cd code
+
+Finally, run the training script:
 ```
-Due to the limitation of runtime on GPUs, we prepared a `train_from_ckpt.py` script to further train on finished epoch:
+python ddi.py \
+    --dataset_name "DeepDDI"\
+    --embed_dim 384\
+    --seed 120\
+    --valid_step 10\
+    --epoch 100\
+    --lr 0.0001\
+    --dropout 0.1\
+    --modality 1\
+    --save_model True\
+    --score_fun 'transformer'\
+    --save_path path_to_saved_checkpoints \
+    --drug_pretrained_dim 768\
+   
+```
 
+PPI datasets (yeast):
+
+First, ensure that pretrained weights for all entities in the dataset are properly located at data\embedding\{dataset_name}
+
+Second, cd code
+
+Finally, run the training script:
+```
+python ppi.py \
+    --dataset_name "yeast"\
+    --embed_dim 384\
+    --seed 120\
+    --valid_step 10\
+    --epoch 100\
+    --lr 0.0001\
+    --dropout 0.1\
+    --modality 1\
+    --save_model True\
+    --score_fun 'transformer'\
+    --save_path path_to_saved_checkpoints\
+    --protein_sequence_dim 1024\
+   
+```
+
+Please modify the dataset_name, path_to_dataset, and save_path according to your experiments.
+
+## Evaluation 
+First, cd code
+Second, run the following script :
+python eval.py \
+    --model_save_path path_to_checkpoint \
+    --gpu True \
+    --test_path path_to_dataset_folder
+
+## Predict interaction between a pair of entities
+python predict.py \
+    --model_save_path path_to_checkpoint \
+    --gpu True \
+    --type 'dti' \
+    --sequence1 amino_acid_sequence_or_smiles_string\
+    --sequence2 amino_acid_sequence_or_smiles_string\
 
 ## Acknowledgements
 

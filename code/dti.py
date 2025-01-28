@@ -1,7 +1,7 @@
 import os
 import torch
 from utils import create_pyg_dataset, generate_bi_coo_matrix, generate_directed_coo_matrix, save_model, exclude_isolation_point,custom_collate
-from parse import parse_args
+import argparse
 from data_loader import DataProcessor, DrugProteinDataSet
 from torch.utils.data import DataLoader
 import numpy as np
@@ -11,14 +11,19 @@ from procedure import train, test
 import pickle
 import random
 
-def main() :
-    args = parse_args()
-    hop = args.hop
+kgcnh_path = os.path.dirname(os.path.dirname(__file__))
+kgdrp = os.path.dirname(kgcnh_path)
+biosnap_path = os.path.join(kgcnh_path, 'data', 'BioSNAP')
+davis_path = os.path.join(kgcnh_path, 'data', 'DAVIS')
+kiba_path = os.path.join(kgcnh_path, 'data', 'KIBA')
+yeast_path = os.path.join(kgcnh_path, 'data', 'yeast')
+bindingdb_path = os.path.join(kgcnh_path, 'data', 'BindingDB')
+
+def main(args) :
     seed = args.seed
     epoch = args.epoch
     save_path = args.save_path
-    #save_model_sign = args.save_model
-    save_model_sign = True
+    save_model_sign = args.save_model
     print(21, "MAIN", save_model_sign)
     model_save_dir = os.path.split(save_path)[0]
     if not os.path.exists(model_save_dir):
@@ -117,8 +122,8 @@ def main() :
     test_set = DrugProteinDataSet(test_triples_data, args.neg_ratio)
     test_data_loader = DataLoader(dataset=test_set, batch_size=32, shuffle=True, collate_fn=custom_collate)
 
-    drug_pretrained_dim = 768
-    gene_sequence_dim = 1024
+    drug_pretrained_dim = args.drug_pretrained_dim
+    gene_sequence_dim = args.protein_pretrained_dim
     code_folder = os.path.dirname(__file__)
     kgcnh_folder = os.path.dirname(code_folder)
     path2_pretrained_embeddings = os.path.join(os.path.dirname(kgcnh_folder), 'embeddings')
@@ -189,41 +194,24 @@ def main() :
     print('\n', 'TEST : ', auc, aupr)
 
 if __name__ == '__main__':
-    main()
-    # 00002 -> epoch = 100, 140 : 08947
-    # left : dot tuning, no message passing , right : mlp score
-    # left embed dim = 512 lr 00004, right 00002 embed dim = 256 => left 00001; right : 00001, no bridging connection
-    # left : 00001, no bridging connection; right : no coeff for bio and nlp
-    # left : one more project linear layer, no relu at the end, right : relu at the end.
-    # left : two MLPs without relu at the end, right : scale up hidden dim => right a bit better
-    # left : no dropout in linear layer, right : one linear layer, no relu at the end -> 09 0911
-    # left : dropout = 0.2, right : dropout = 0.05
-    # left : dropout = 0.1, no weight decay;  right : smaller weight decay
-    # left : eval of sota, right : smaller lr = 0.00005
-    # left : no                    ,  right : lr = 0.00005, epoch = 300
-    # left : no message passing with normalization, right : message passing with normalization, relation zeros, ones
-    # left : bio coeff = 1.25, right : nlp coeff = 0.75; right : bio coeff = 2, nlp coeff = 1  => left : 0.91468
-    # left : bio coeff = 0.75, right : nlp coeff = 1.25; right : bio coeff = 1.5, nlp coeff = 0.5
-    # left : seed 86, right : seed 100   => seed 100 : SOTA
-    # left : huber loss, right : mse loss
-    # left : 2 0 nlp bio ; right : 0 2 nlp bio
-    # seed 120 : left : 0.8 1.2 coeff ; right : 0.7 1.3  right SOTA
-    # seed 142 : left : 0.9 1.1 coeff ; right : 0.6 1.4
-    # left : 0.4 1.6 ; right : 0.5 1.5
-    # left : 0.7 1.3 ; right : 0.8 1.2 ; both : bio dim x 2
-    # left : lr = 0.0001678, right : lr = 0.00032
-    # mlp coeffs, left : 0.0001, right : 0.0005, no update for the coeff weights
-    # mlp coeffs, left : 0.01, right : 0.005, update for the coeff weights
-    # cross loss, left : 0.0001, right : 0.0003  -> 0.9136 test
-    # cross 4 layers, left : 0.0001, right : 0.0003
-    # no softmax coeffs, left : 0.001, right : 0.0005
-    # left: double normalization score , lr = 0.001 (maybe); right : pos_weight
-    # left : pos_weight = 1.5, right : pos_weight = 1.8
-    # left : pos_weight = 1.1, lr = 0.0001, embed dim = 256, right : similar, embed dim = 320, no pos weight 
-    # coeff 0.68, 1.32;  left : embed dim = 280 , right : embed dim = 320.
-    # 3 modality , coeff : 0.8 , 2, lr 0.0001; right : lr 0.00005
-    # 3 modality, left : 0.00001 coeff : above, right : 0.00001 coeff : no
-    # left : bridging in prediction, right : no bridging
-    # left : lr 1e-5, right : lr 1e-4
-    # left : lr 5e-4 coeffs 0.3 geo, right : lr 5e-4, coeffs
-    # left : 03 nlp 068 struc , right : 068 nlp 03 struc lr 00001
+    parser = argparse.ArgumentParser(description="456")
+    parser.add_argument('--dataset_name', type=str, default="BioSNAP")
+    parser.add_argument('--data_path', default=biosnap_path)
+    parser.add_argument('--embed_dim', type=int, default=384,
+                        help="the embedding size entity and relation")
+    parser.add_argument('--seed', type=int, default=120) # 42, 85, 100
+    parser.add_argument('--valid_step', type=int, default=10)
+    parser.add_argument('--epoch', type=int, default=100)
+    parser.add_argument('--lr', type=float, default=0.0001,
+                        help="the learning rate")
+    parser.add_argument('--dropout', type=float, default=0.1,
+                        help="using the dropout ratio")
+    parser.add_argument('--modality', type=int, default=1)
+    parser.add_argument('--save_model', type = bool, default = True, action='store_true', help='save_model')
+    parser.add_argument('--save_path', nargs='?', default=os.path.join(kgdrp, 'log' , 'result.pkl'), help='Input save path.')
+    parser.add_argument('--score_fun', nargs='?', default='transformer', help='Input data path.')
+    parser.add_argument('--drug_pretrained_dim', type=int, default = 768)
+    parser.add_argument('--protein_sequence_dim', type=int, default = 1024)
+    args =  parser.parse_args()
+    main(args)
+   

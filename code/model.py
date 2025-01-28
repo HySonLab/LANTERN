@@ -206,8 +206,6 @@ class Model(ABCModel):
 
     def get_pretrained_embedding(self) :
         if self.path_2_pretrained_embedding is not None :
-            print(209, 'model', self.path_2_pretrained_embedding)
-            self.path_2_pretrained_embedding = 'E:/TMI/embeddings'
             drug_smiles_pretrained_path = os.path.join(self.path_2_pretrained_embedding,  self.dataset_name,'pretrained', 'drug', 'drug_smiles.json')
             with open(drug_smiles_pretrained_path, 'r') as f :
                 drug_smiles_pretrained = json.load(f)
