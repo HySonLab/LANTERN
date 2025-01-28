@@ -1,6 +1,6 @@
 # LANTERN: Leveraging Large Language Models And Transformer For Enhanced Molecular Interaction
 
-![LANTERN](assets\lantern.jpg)
+![LANTERN](assets/lantern.png)
 
 Contributors:
 * Anonymous member 1

@@ -1,7 +1,7 @@
 # Data: https://drive.google.com/drive/folders/1SukKTPbuGUPHn5uIGfnBlh3Jhdgi8hcl?usp=sharing
 ## Drug - target interaction (DTI) benchmark
-+ Davis 
-+ Kiba
++ DAVIS
++ KIBA
 + BIOSNAP
 ## Protein - protein interaction (PPI) benchmark
 + Yeast
