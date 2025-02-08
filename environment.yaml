@@ -1,4 +1,4 @@
-name: gearnet
+name: LANTERN
 channels:
   - milagraph
   - conda-forge
