@@ -1,8 +1,6 @@
 import torch
 from torch import nn
 from torch.nn import functional as fn
-#from Threed_protein import *
-#from Threed_drug import *
 import traceback
 from collections import defaultdict
 import numpy as np
@@ -98,14 +96,12 @@ class ABCModel(nn.Module):
             return loss
 
 class Model(ABCModel):
-    def __init__(self, entity_num, drug_num, protein_num, relation_num, embed_dim,model_args, enable_augmentation,
-                gumbel_args, weight_decay, p_drop, score_fun='dot', device='cpu', modality = 3, dataset_name = 'BioSNAP',
+    def __init__(self, entity_num, drug_num, protein_num, embed_dim, weight_decay, p_drop, score_fun='dot', device='cpu', modality = 1, dataset_name = 'BioSNAP',
                 train_entity2index=None, path_2_pretrained_embedding = None, drug_pretrained_dim=None, gene_sequence_dim = None):
 
         super(Model, self).__init__()
         self.entity_num = entity_num
         self.drug_num = drug_num # drug : 4400 protein : 2000 ; train entity2index : id -> index
-        self.relation_num = relation_num
         self.embed_dim = embed_dim
         self.modality = modality
         self.dataset_name = dataset_name
@@ -114,68 +110,39 @@ class Model(ABCModel):
         self.drug_pretrained_dim = drug_pretrained_dim
         self.gene_function_dim = drug_pretrained_dim
         self.gene_sequence_dim = gene_sequence_dim
-        #self.enable_pretrained_init = True        
         init = torch.zeros((entity_num, embed_dim))
-        init_r = torch.zeros((relation_num, embed_dim))
         gain = nn.init.calculate_gain('relu')
         torch.nn.init.xavier_normal_(init, gain=gain)
-        torch.nn.init.xavier_normal_(init_r, gain=gain)
         self.entity_embed = nn.Parameter(init) # 6400 x embed_dim
-        
-        
-        #self.relation_embed = nn.Parameter(init_r)
-        self.enable_augmentation = enable_augmentation
-        self.gumbel_args = gumbel_args
-        if enable_augmentation:
-            index = [i for i in range(entity_num)]
-            np.random.shuffle(index)
-            init_augment = init[index]
-            self.augment_entity_embed = nn.Parameter(init_augment)
-            self.augment_relation_embed = nn.Parameter(init_r)
-
-        self.entity_num = entity_num
         self.protein_num = protein_num
-        self.relation_num = relation_num
-        self.embed_dim = embed_dim
-        self.layer_num = model_args[0]
-        self.head_num = model_args[1]
         self.weight_decay = weight_decay
         self.p_drop = p_drop
         self.test_indices_to_train_indices = None
-
-        """
-        self.kgcnh_layer = nn.ModuleList()
-        for _ in range(self.layer_num):
-            self.kgcnh_layer.append(
-                KGCNH((entity_num, embed_dim), self.head_num, p_drop, enable_augmentation, gumbel_args))
-        """
         self.score_fun = score_fun
-        self.mlp = None
-        self.reset_parameters()
         self.path_2_pretrained_embedding = path_2_pretrained_embedding
 
         
         self.drug_des_project = nn.Sequential(
             nn.Linear(self.drug_pretrained_dim, self.embed_dim),
-            torch.nn.Dropout(p=0.1, inplace=False),
+            torch.nn.Dropout(p=self.p_drop, inplace=False),
             nn.ReLU(),
             nn.Linear(self.embed_dim, int(self.embed_dim/self.modality)),
         )
         self.drug_smiles_project = nn.Sequential(
             nn.Linear(self.drug_pretrained_dim, self.embed_dim),
-            torch.nn.Dropout(p=0.1, inplace=False),
+            torch.nn.Dropout(p=self.p_drop, inplace=False),
             nn.ReLU(),
             nn.Linear(self.embed_dim, int(self.embed_dim/self.modality)),
         )
         self.gene_function_project = nn.Sequential(
             nn.Linear(self.gene_function_dim, self.embed_dim),
-            torch.nn.Dropout(p=0.1, inplace=False),
+            torch.nn.Dropout(p=self.p_drop, inplace=False),
             nn.ReLU(),
             nn.Linear(self.embed_dim, int(self.embed_dim/self.modality)),
         )
         self.gene_sequence_project = nn.Sequential(
             nn.Linear(self.gene_sequence_dim, self.embed_dim),
-            torch.nn.Dropout(p=0.1, inplace=False),
+            torch.nn.Dropout(p=self.p_drop, inplace=False),
             nn.ReLU(),
             nn.Linear(self.embed_dim, int(self.embed_dim/self.modality)),
         )
@@ -192,17 +159,7 @@ class Model(ABCModel):
                                      nn.Linear(2 * self.embed_dim, 1),
                                      )
         #self.predictor1 = nn.Sequential(nn.Linear(2*self.embed_dim,1))
-        self.dropout = nn.Dropout(0.1)
-
-    def reset_parameters(self):
-        gain = nn.init.calculate_gain('relu')
-        if self.score_fun == 'mlp':
-            self.mlp = nn.Sequential(nn.Linear(self.embed_dim, self.embed_dim),
-                                     nn.ReLU(),
-                                     nn.Linear(self.embed_dim, 1))
-            for m in self.mlp:
-                if isinstance(m, nn.Linear):
-                    nn.init.xavier_normal_(m.weight, gain=gain)
+        self.dropout = nn.Dropout(self.p_drop)
 
     def get_pretrained_embedding(self) :
         if self.path_2_pretrained_embedding is not None :
@@ -361,7 +318,7 @@ class Model(ABCModel):
                 h_geo_embed = h_embed[:,:,int(2*self.embed_dim/self.modality):]
                 t_geo_embed = t_embed[:,:,int(2*self.embed_dim/self.modality):]
             if self.modality == 3 :
-                return 0.68*((h_nlp_embed*t_nlp_embed).sum(-1))+1.32*((h_bio_embed*t_bio_embed).sum(-1))+((h_geo_embed*t_geo_embed).sum(-1))
+                return ((h_nlp_embed*t_nlp_embed).sum(-1))+((h_bio_embed*t_bio_embed).sum(-1))+((h_geo_embed*t_geo_embed).sum(-1))
             elif self.modality == 2 :
                 return ((h_nlp_embed*t_nlp_embed).sum(-1))+((h_bio_embed*t_bio_embed).sum(-1))
             else :
@@ -371,7 +328,7 @@ class Model(ABCModel):
             neg_score = calc_score(h_embed, n_t_embed) 
         return pos_score, neg_score
     
-    def calc_mlp_score(self, h_embed, pos_t_embed=None, n_t_embed=None):
+    def calc_trans_score(self, h_embed, pos_t_embed=None, n_t_embed=None):
         pos_score = None
         neg_score = None
         def calc_score(h_embed, pos_t_embed) :
@@ -382,15 +339,21 @@ class Model(ABCModel):
                 num_heads = h_embed.shape[1]
                 pos_t_embed = pos_t_embed.repeat(1, num_heads, 1)
             h_pos_embed = torch.cat([h_embed, pos_t_embed],dim=-1)
-            v_f = h_pos_embed
-            for i, l in enumerate(self.predictor1):
-                if i==(len(self.predictor1)-1):
-                    feat = v_f
-                    score = l(v_f)
-                else:
-                    v_f = l(v_f)
-                    v_f = fn.relu(self.dropout(v_f))
-            return score
+            num_pos = h_pos_embed.shape[1]
+            scores = []
+            for i in range(num_pos) :
+                v_f = h_pos_embed[:,i,:]
+                score = None
+                for i, l in enumerate(self.predictor1):
+                    if i==(len(self.predictor1)-1):
+                        feat = v_f
+                        score = l(v_f)
+                    else:
+                        v_f = l(v_f)
+                        v_f = fn.relu(self.dropout(v_f))
+                scores.append(score)
+            scores = torch.cat(scores, dim = 1)
+            return scores
         if pos_t_embed.numel() != 0 :
             pos_score = calc_score(h_embed, pos_t_embed)
         if n_t_embed.numel() != 0 :
@@ -423,8 +386,8 @@ class Model(ABCModel):
         h_embed = h_embed.unsqueeze(1) # bs, 1, embed_dim
         pos_t_embed = self.entity_embed[pos_t]
         n_t_embed = self.entity_embed[n_t]
-        if self.score_fun == 'mlp':
-            pos_score, neg_score = self.calc_mlp_score(h_embed,pos_t_embed,n_t_embed)
+        if self.score_fun == 'transformer':
+            pos_score, neg_score = self.calc_trans_score(h_embed,pos_t_embed,n_t_embed)
         else:
             pos_score, neg_score = self.calc_dot_score(h_embed,pos_t_embed,n_t_embed)
         return pos_score, neg_score, embed
@@ -482,8 +445,8 @@ class Model(ABCModel):
         batch_pos_t_embed = batch_pos_t_embed.to(device) if isinstance(batch_pos_t_embed, torch.Tensor) else None
         
         if n_t.numel() != 0 :
-            if self.score_fun == 'mlp' :
-                pos_score, neg_score = self.calc_mlp_score(h_embed, batch_pos_t_embed, batch_neg_t_embed)
+            if self.score_fun == 'transformer' :
+                pos_score, neg_score = self.calc_trans_score(h_embed, batch_pos_t_embed, batch_neg_t_embed)
             else :
                 pos_score, neg_score = self.calc_dot_score(h_embed, batch_pos_t_embed, batch_neg_t_embed)
             pos_score_flat = pos_score.contiguous().view(-1) if pos_score is not None else None
@@ -505,8 +468,8 @@ class Model(ABCModel):
         elif n_t.numel() == 0 :
             if pos_t.numel() == 0 :
                 return None
-            if self.score_fun == 'mlp' :
-                pos_score, _ = self.calc_mlp_score(h_embed, batch_pos_t_embed, batch_pos_t_embed)
+            if self.score_fun == 'transformer' :
+                pos_score, _ = self.calc_trans_score(h_embed, batch_pos_t_embed, batch_pos_t_embed)
             else :
                 pos_score, _ = self.calc_dot_score(h_embed, batch_pos_t_embed, batch_pos_t_embed)
             pos_score_flat = pos_score.contiguous().view(-1)
@@ -521,16 +484,11 @@ class Model(ABCModel):
         """
         Get trained entity embedding for predictions from the ID of drugs or genes
         """
-        #test_entity = str(test_entity)
-        #if self.enable_pretrained_init is False :
         #    return random_initialize((self.embed_dim, ))
         if test_entity in self.train_entity2index.keys() :
             return self.entity_embed[self.train_entity2index[test_entity]]
         else :
-            #print("746, model, this entity is not in the train set")
             drug_pretrained, gene_pretrained = self.get_pretrained_embedding()
-            #print(536, 'MODEL',list(drug_pretrained.items())[0])
-            #print(537, 'MODEL', drug_pretrained[test_entity])
             if self.modality == 3 :
                 drug_des_pretrained_dict, drug_smiles_pretrained_dict, drug_structure_embed = drug_pretrained
                 gene_func_pretrained_dict, gene_sequence_pretrained_dict, prot_structure_embed = gene_pretrained
@@ -564,11 +522,6 @@ class Model(ABCModel):
                             drug_structure_embeddding = torch.tensor(drug_structure_embed[test_entity], dtype=torch.float).to(self.device)
                         else :
                             drug_structure_embeddding = self.drug_smiles_project(drug_smiles_pretrained).to(self.device)
-                    
-                    #trained_drug_des_pretrained_embed = {
-                    #    drug : torch.tensor(drug_des_pretrained_dict[drug]).to(self.device) for drug in self.trained_drugs
-                    #}
-                    #most_similar_drug_des, sim_des = find_most_similar_drug(drug_des_pretrained, trained_drug_des_pretrained_embed)
                     if self.modality == 3 :
                         embed = torch.cat([drug_des,drug_smiles,drug_structure_embeddding], axis=-1)
                     elif self.modality == 2 :
@@ -589,8 +542,6 @@ class Model(ABCModel):
                     gene_sequence_pretrained = torch.tensor(gene_sequence_pretrained_dict[test_entity], dtype=torch.float).to(self.device)
                     most_similar_gene_seq, sim_seq = find_most_similar_drug(gene_sequence_pretrained, trained_gene_seq_pretrained_embed)
                     gene_sequence_pretrained = self.gene_sequence_project(gene_sequence_pretrained) # OLD VERSION
-                    #gene_seq = (gene_sequence_pretrained + (self.entity_embed[self.train_entity2index[most_similar_gene_seq]] * sim_seq)[:int(self.embed_dim/2)])/2
-                    #gene_seq = (gene_sequence_pretrained + (self.entity_embed[self.train_entity2index[most_similar_gene_seq]])[int(self.embed_dim/self.modality):int(2*self.embed_dim/self.modality)])/2
                     gene_seq = gene_sequence_pretrained
 
                     if self.modality >= 2 :
@@ -628,8 +579,8 @@ class Model(ABCModel):
         h : potential drugs : (drug_num, 2*embed_size)
         n_t : protein targets : (1, 2 * embed_size)
         """
-        if self.score_fun == 'mlp' :
-            return self.calc_mlp_score(h_embed, n_t_embed)
+        if self.score_fun == 'transformer' :
+            return self.calc_trans_score(h_embed, n_t_embed)
         else :
             return self.calc_dot_score(h_embed, n_t_embed)
 
@@ -773,8 +724,8 @@ class DDI_Model(Model) :
         batch_pos_t_embed = batch_pos_t_embed.to(device) if isinstance(batch_pos_t_embed, torch.Tensor) else None
         
         if n_t.numel() != 0 :
-            if self.score_fun == 'mlp' :
-                pos_score, neg_score = self.calc_mlp_score(h_embed, batch_pos_t_embed, batch_neg_t_embed)
+            if self.score_fun == 'transformer' :
+                pos_score, neg_score = self.calc_trans_score(h_embed, batch_pos_t_embed, batch_neg_t_embed)
             else :
                 pos_score, neg_score = self.calc_dot_score(h_embed, batch_pos_t_embed, batch_neg_t_embed)
             pos_score_flat = pos_score.contiguous().view(-1) if pos_score is not None else None
@@ -796,8 +747,8 @@ class DDI_Model(Model) :
         elif n_t.numel() == 0 :
             if pos_t.numel() == 0 :
                 return None
-            if self.score_fun == 'mlp' :
-                pos_score, _ = self.calc_mlp_score(h_embed, batch_pos_t_embed, batch_pos_t_embed)
+            if self.score_fun == 'transformer' :
+                pos_score, _ = self.calc_trans_score(h_embed, batch_pos_t_embed, batch_pos_t_embed)
             else :
                 pos_score, _ = self.calc_dot_score(h_embed, batch_pos_t_embed, batch_pos_t_embed)
             pos_score_flat = pos_score.contiguous().view(-1)
@@ -846,10 +797,6 @@ class DDI_Model(Model) :
                         else :
                             drug_structure_embeddding = self.drug_smiles_project(drug_smiles_pretrained).to(self.device)
                     
-                    #trained_drug_des_pretrained_embed = {
-                    #    drug : torch.tensor(drug_des_pretrained_dict[drug]).to(self.device) for drug in self.trained_drugs
-                    #}
-                    #most_similar_drug_des, sim_des = find_most_similar_drug(drug_des_pretrained, trained_drug_des_pretrained_embed)
                     if self.modality == 3 :
                         embed = torch.cat([drug_des,drug_smiles,drug_structure_embeddding], axis=-1)
                     elif self.modality == 2 :
@@ -1002,8 +949,8 @@ class PPI_Model(Model) :
         batch_pos_t_embed = batch_pos_t_embed.to(device) if isinstance(batch_pos_t_embed, torch.Tensor) else None
         
         if n_t.numel() != 0 :
-            if self.score_fun == 'mlp' :
-                pos_score, neg_score = self.calc_mlp_score(h_embed, batch_pos_t_embed, batch_neg_t_embed)
+            if self.score_fun == 'transformer' :
+                pos_score, neg_score = self.calc_trans_score(h_embed, batch_pos_t_embed, batch_neg_t_embed)
             else :
                 pos_score, neg_score = self.calc_dot_score(h_embed, batch_pos_t_embed, batch_neg_t_embed)
             pos_score_flat = pos_score.contiguous().view(-1) if pos_score is not None else None
@@ -1025,8 +972,8 @@ class PPI_Model(Model) :
         elif n_t.numel() == 0 :
             if pos_t.numel() == 0 :
                 return None
-            if self.score_fun == 'mlp' :
-                pos_score, _ = self.calc_mlp_score(h_embed, batch_pos_t_embed, batch_pos_t_embed)
+            if self.score_fun == 'transformer' :
+                pos_score, _ = self.calc_trans_score(h_embed, batch_pos_t_embed, batch_pos_t_embed)
             else :
                 pos_score, _ = self.calc_dot_score(h_embed, batch_pos_t_embed, batch_pos_t_embed)
             pos_score_flat = pos_score.contiguous().view(-1)
@@ -1073,11 +1020,6 @@ class PPI_Model(Model) :
                             prot_structure_embeddding = torch.tensor(prot_structure_embed[test_entity], dtype=torch.float).to(self.device)
                         else :
                             prot_structure_embeddding = self.gene_sequence_project(gene_seq_pretrained).to(self.device)
-                    
-                    #trained_drug_des_pretrained_embed = {
-                    #    drug : torch.tensor(drug_des_pretrained_dict[drug]).to(self.device) for drug in self.trained_drugs
-                    #}
-                    #most_similar_drug_des, sim_des = find_most_similar_drug(drug_des_pretrained, trained_drug_des_pretrained_embed)
                     if self.modality == 3 :
                         embed = torch.cat([gene_func,gene_seq,prot_structure_embeddding], axis=-1)
                     elif self.modality == 2 :

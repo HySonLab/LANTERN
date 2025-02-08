@@ -6,14 +6,7 @@ import json
 import torch
 import re
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-# Example usage:
-csv_paths = [r'E:\Research\Hysonlab\KGDRP\KGCNH\data\BioSNAP\train.csv', 
-             r'E:\Research\Hysonlab\KGDRP\KGCNH\data\BioSNAP\val.csv', 
-             r'E:\Research\Hysonlab\KGDRP\KGCNH\data\BioSNAP\test.csv']
-                  # Replace with your input CSV file path
-output_csv_paths = [r'E:\Research\Hysonlab\KGDRP\KGCNH\data\BioSNAP\train2.csv', 
-             r'E:\Research\Hysonlab\KGDRP\KGCNH\data\BioSNAP\val2.csv', 
-             r'E:\Research\Hysonlab\KGDRP\KGCNH\data\BioSNAP\test2.csv']  # Replace with your desired output file path
+
 
 def get_gene_function_description(uniprot_id):
     url = f"https://rest.uniprot.org/uniprotkb/{uniprot_id}.json"

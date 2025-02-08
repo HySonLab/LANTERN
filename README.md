@@ -20,7 +20,7 @@ The main innovations we made away from LANTERN, but not limited to:
 ## Setup Environment
 Clone this repository and install dependencies:
 ```bash
-git clone https://github.com/HySonLab/LANTERN.git
+git clone https://github.com/anonymousreseach99/LANTERN.git
 cd LANTERN
 conda env create -f environment.yaml
 conda activate LANTERN
@@ -45,13 +45,14 @@ LANTERN
 ## Training
 ### DTI datasets (BioSNAP, DAVIS, KIBA):
 
-First, ensure that pretrained weights for all entities in the dataset are properly located at data\embedding\{dataset_name}.
+First, ensure that pretrained weights and dataset for all entities in the dataset are properly located at LANTERN\data as guided in LANTERN\data\README.md .
 
 Second, cd code .
 
 Finally, run the training script:
 ```
-python dti.py \
+python main.py \
+    --interaction_tyoe "DTI"\
     --dataset_name "BioSNAP"\
     --embed_dim 384 \
     --seed 120 \
@@ -72,13 +73,14 @@ Please modify the dataset_name, path_to_dataset, and save_path according to your
 
 ### DDI datasets (DeepDDI):
 
-First, ensure that pretrained weights for all entities in the dataset are properly located at data\embedding\{dataset_name} .
+First, ensure that pretrained weights and dataset for all entities in the dataset are properly located at LANTERN\data as guided in LANTERN\data\README.md .
 
 Second, cd code .
 
 Finally, run the training script:
 ```
-python ddi.py \
+python main.py \
+    --interaction_type "DDI" \
     --dataset_name "DeepDDI" \
     --embed_dim 384 \
     --seed 120 \
@@ -102,7 +104,8 @@ Second, cd code.
 
 Finally, run the training script:
 ```
-python ppi.py \
+python main.py \
+    --interaction_type "PPI" \
     --dataset_name "yeast" \
     --embed_dim 384 \
     --seed 120 \
@@ -127,6 +130,8 @@ Second, run the following script :
 python eval.py \
     --model_save_path path_to_checkpoint \
     --gpu True \
+    --interaction_type "DTI" \
+    --dataset_name "BioSNAP"
     --test_path path_to_dataset_folder \
 ```
 

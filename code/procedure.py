@@ -1,7 +1,9 @@
 import torch
-from utils import calc_auc, calc_aupr
+from utils import calc_auc, calc_aupr, calc_other_metrics
 import traceback
 from torch import nn
+import numpy as np
+import random
 
 def train(model, train_dataloader, optimizer, device, lr, train_entity2index=None):
     model.train()
@@ -39,6 +41,10 @@ def train(model, train_dataloader, optimizer, device, lr, train_entity2index=Non
 
 
 def test(model, test_dataloader, device, test_entity2index):
+    seed = 120 # 20, 80, 100, 200
+    torch.manual_seed(seed)
+    np.random.seed(seed)
+    random.seed(seed)
     model.eval()
     all_logit = []
     all_label = []
@@ -94,4 +100,5 @@ def test(model, test_dataloader, device, test_entity2index):
         print("173, The number of affected batches in the test procedure : ", affected_batches)
     auc = calc_auc(all_label, all_logit)
     aupr = calc_aupr(all_label, all_logit)
-    return auc, aupr, all_logit, all_label
+    other_metrics = calc_other_metrics(all_label, all_logit)
+    return auc, aupr, other_metrics, all_logit, all_label

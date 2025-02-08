@@ -1,4 +1,4 @@
 # Checkpoints
 The checkpoints are available at : 
-https://drive.google.com/drive/folders/1XemB9mhqQTSmLqxQAxjhV0xPMCf9tquC?usp=sharing
+https://drive.google.com/drive/folders/1Dph9nUsovudogbIv4v8SuYCspcWdMfOI?usp=drive_link
 │ 

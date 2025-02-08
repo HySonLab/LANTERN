@@ -1,4 +1,5 @@
 # mypy: allow-untyped-defs
+# Code is from Pytorch official transformer encoder layer implementation
 import copy
 import warnings
 from typing import Any, Callable, Optional, Union
@@ -340,3 +341,63 @@ class TransformerEncoderLayer(Module):
     def _ff_block(self, x: Tensor) -> Tensor:
         x = self.linear2(self.dropout(self.activation(self.linear1(x))))
         return self.dropout2(x)
+
+class CrossAttentionFreeTransformer(nn.Module):
+    def __init__(self, embed_dim, hidden_dim, num_layers=1):
+        super().__init__()
+        self.conv1 = nn.Conv1d(embed_dim, hidden_dim, kernel_size=1)  # Linear projection
+        self.conv2 = nn.Conv1d(hidden_dim, embed_dim, kernel_size=1)  # Back to original dim
+        self.gate = nn.Conv1d(embed_dim, embed_dim, kernel_size=1)  # Gating mechanism
+        self.norm = nn.LayerNorm(embed_dim)
+        self.activation = nn.GELU()
+        self.num_layers = num_layers
+
+    def forward(self, x1, x2):
+        x1 = x1.permute(0, 2, 1)  # (B, D, L) for Conv1d
+        x2 = x2.permute(0, 2, 1)
+
+        for _ in range(self.num_layers):
+            f_x1 = self.conv1(x1)  # Apply 1D conv
+            f_x2 = self.conv1(x2)
+
+            g_x1 = torch.sigmoid(self.gate(x1))  # Gate mechanism
+            g_x2 = torch.sigmoid(self.gate(x2))
+
+            x1 = self.conv2(self.activation(f_x1 * g_x2)) + x1  # Cross gating
+            x2 = self.conv2(self.activation(f_x2 * g_x1)) + x2
+
+            x1 = self.norm(x1.permute(0, 2, 1))  # Back to (B, L, D)
+            x2 = self.norm(x2.permute(0, 2, 1))
+        res = torch.concat([x1, x2], dim = -1)
+        return res  # Return the transformed embeddings
+
+
+class CrossAttentionTransformer(nn.Module):
+    def __init__(self, embed_dim, num_heads=8, ff_dim=512, dropout=0.1):
+        super().__init__()
+        self.cross_attn_1 = nn.MultiheadAttention(embed_dim, num_heads, dropout=dropout, batch_first=True)
+        self.cross_attn_2 = nn.MultiheadAttention(embed_dim, num_heads, dropout=dropout, batch_first=True)
+        self.ffn = nn.Sequential(
+            nn.Linear(embed_dim, ff_dim),
+            nn.GELU(),
+            nn.Linear(ff_dim, embed_dim)
+        )
+        self.norm1 = nn.LayerNorm(embed_dim)
+        self.norm2 = nn.LayerNorm(embed_dim)
+        self.dropout = nn.Dropout(dropout)
+
+    def forward(self, x1, x2):
+        # Cross-attention: x1 attends to x2
+        attn_output1, _ = self.cross_attn_1(x1, x2, x2)
+        x1 = self.norm1(x1 + self.dropout(attn_output1))
+
+        # Cross-attention: x2 attends to x1
+        attn_output2, _ = self.cross_attn_2(x2, x1, x1)
+        x2 = self.norm2(x2 + self.dropout(attn_output2))
+
+        # Feed-forward layers (optional)
+        x1 = x1 + self.dropout(self.ffn(x1))
+        x2 = x2 + self.dropout(self.ffn(x2))
+
+        res = torch.concat([x1, x2], dim = -1)
+        return res  # Return the transformed embeddings

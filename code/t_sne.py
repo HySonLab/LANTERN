@@ -19,51 +19,6 @@ import ast  # For safely evaluating the string as a Python list
 import matplotlib.pyplot as plt
 from sklearn.manifold import TSNE
 
-device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-code_folder = os.path.dirname(__file__)
-kgcnh_folder = os.path.dirname(code_folder)
-kgdrp_folder = os.path.dirname(kgcnh_folder)
-
-kgcnh_path = os.path.dirname(os.path.dirname(__file__))
-biosnap_path = os.path.join(kgcnh_path, 'data', 'BioSNAP')
-
-model_save_path = os.path.join(kgcnh_folder, 'log','training','BioSNAP', '1', 'result_0.992936974798785_19.pkl')
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
- 
-class Custom_CPU_Unpickler(pickle.Unpickler):     
-    def find_class(self, module, name):
-        if module == "model":
-            module = "KGCNH.code.model"
-        elif module == "layers":
-            module = "KGCNH.code.layers"
-        # Special case for torch.storage._load_from_bytes
-        if module == "torch.storage" and name == "_load_from_bytes":
-            return lambda b: torch.load(io.BytesIO(b), map_location='cpu')
-        return super().find_class(module, name)
-
-    
-def load_cpu_pickle_model() :
-    if torch.cuda.is_available():
-        device = 'cuda'
-    else:
-        device = 'cpu'
-    
-    seed = 24 # 120 auc : 0.963, aupr : 0.949; 10 auc : 0.955, aupr : 0.937; 1200 : 0.953, 0.943, result_aupr = 0.99135, num_head = 4
-    torch.manual_seed(seed)
-    np.random.seed(seed)
-    random.seed(seed)
-
-    with open(model_save_path, "rb") as f:
-      res = Custom_CPU_Unpickler(f).load()
-      #model = torch.load(f, map_location=torch.device('cpu'))
-    print("Type res :", type(res))
-    print("Keys of res :" , res.keys())
-    model = res['model']
-    #model.dataset_name = 'DAVIS'
-    #model.path_2_pretrained_embedding = os.path.join(os.path.dirname(kgcnh_folder), 'embeddings')
-    #model.modality = 1
-    model.eval()
-    return model
 
 def create_pretrained_embedding_csv(output_csv_path, test_csv_path, drug_embed_json_path, gene_embed_json_path):
     # Step 1: Load the test.csv file
@@ -217,30 +172,5 @@ def visualize_tsne(csv_path):
 
 
 if __name__ =='__main__' :
-    # Example usage
-    """
-    create_pretrained_embedding_csv(
-        output_csv_path='E:/TMI/KGCNH/data/BioSNAP/t_sme.csv',
-        test_csv_path='E:/TMI/KGCNH/data/BioSNAP/test.csv',
-        drug_embed_json_path='E:/TMI/embeddings/BioSNAP/pretrained/drug/drug_smiles.json',
-        gene_embed_json_path='E:/TMI/embeddings/BioSNAP/pretrained/gene/gene_sequence.json'
-    )
-    """
-
-    #model = load_cpu_pickle_model()
-    #print(len(model.train_entity2index))
-    #print(type(model))
-    #t_sme_pretrained_path = 'E:/TMI/KGCNH/data/BioSNAP/t_sme.csv'
-    #visualize_tsne(t_sme_pretrained_path)
-
-    """
-    create_trained_embedding_csv(
-        output_csv_path='E:/TMI/KGCNH/data/BioSNAP/t_sme_transformer.csv',
-        test_csv_path='E:/TMI/KGCNH/data/BioSNAP/test.csv',
-        drug_embed_json_path='E:/TMI/embeddings/BioSNAP/pretrained/drug/drug_smiles.json',
-        gene_embed_json_path='E:/TMI/embeddings/BioSNAP/pretrained/gene/gene_sequence.json'
-    )
-    """
-
-    t_sme_transformer_path = 'E:/TMI/KGCNH/data/BioSNAP/t_sme_transformer.csv'
-    visualize_tsne(t_sme_transformer_path)
+    #visualize_tsne()
+    return

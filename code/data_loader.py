@@ -10,13 +10,12 @@ import pandas as pd
 import pickle
 
 code_folder = os.path.dirname(__file__)
-kgcnh_folder = os.path.dirname(code_folder)
+lantern_folder = os.path.dirname(code_folder)
 
 # Class for processing the relations
 class DataProcessor(object):
-    def __init__(self, data_path=os.path.join(kgcnh_folder, 'data', 'BioSNAP') , hop=None, mode="train") -> None:
+    def __init__(self, data_path=os.path.join(lantern_folder, 'data', 'BioSNAP'), mode="train") -> None:
         self.root = data_path
-        self.hop = hop
         self.mode = mode + '.csv'
         self.sample_subset = None
         self.entities2id = self._get_entities_id()
@@ -200,13 +199,12 @@ class PPI_DataProcessor(DataProcessor) :
 # We need to sample neg samples for sub_triple;
 # We need all_triple to store all positive samples of (h,r), then negative samples sampled are not in pos of (h,r).
 class DrugProteinDataSet(Dataset):
-    def __init__(self, all_triple, neg_ratio, mode='train') -> None:
+    def __init__(self, all_triple, mode='train') -> None:
 
         super(DrugProteinDataSet, self).__init__()
         self.all_triple = all_triple
-        self.triple_dict = defaultdict(list)
-        self.neg_ratio = neg_ratio
         self.mode = mode
+        self.triple_dict = defaultdict(list)
         self.num_entities = 0
         self.tail = None
         self.len_tail = 0
@@ -275,6 +273,50 @@ class DrugProteinDataSet(Dataset):
     def __len__(self):
         return len(self.all_triple)
 
+class ProteinProteinDataSet(DrugProteinDataSet):
+    def process_all_triple(self):
+        num_entities = 0
+        triple_dict = self.triple_dict
+        tail = set()
+        head = set()
+        for triple in self.all_triple : 
+            h, r, t = triple
+            num_entities = max(num_entities, h, t)
+            head.add(h)
+            tail.add(t)
+            triple_dict[(h, r)].append(t)
+            if self.mode == 'train' :
+                triple_dict[(t, r)].append(h)
+                head.add(t)
+                tail.add(h)
+        self.num_entities = num_entities + 1
+        self.head = np.array(list(head))
+        self.tail = np.array(list(tail))
+        self.len_head = len(self.head)
+        self.len_tail = len(self.tail)
+        self.triple_dict = triple_dict
 
+class DrugDrugDataSet(DrugProteinDataSet):
+    def process_all_triple(self):
+        num_entities = 0
+        triple_dict = self.triple_dict
+        tail = set()
+        head = set()
+        for triple in self.all_triple : 
+            h, r, t = triple
+            num_entities = max(num_entities, h, t)
+            head.add(h)
+            tail.add(t)
+            triple_dict[(h, r)].append(t)
+            if self.mode == 'train' :
+                triple_dict[(t, r)].append(h)
+                head.add(t)
+                tail.add(h)
+        self.num_entities = num_entities + 1
+        self.head = np.array(list(head))
+        self.tail = np.array(list(tail))
+        self.len_head = len(self.head)
+        self.len_tail = len(self.tail)
+        self.triple_dict = triple_dict
 
 
