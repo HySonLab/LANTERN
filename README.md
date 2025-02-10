@@ -3,9 +3,9 @@
 ![LANTERN](assets/lantern.png)
 
 Contributors:
-* Anonymous member 1
-* Anonymous member 2
-* Anonymous member 3
+* Ha Cong Nga
+* Phuc Pham
+* Truong-Son Hy (PI)
 
 The main functionalities from LANTERN include, but not limited to:
 - Featurization of ligand SMILES and protein Amino Acids.
